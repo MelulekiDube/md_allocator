@@ -10,11 +10,18 @@ private:
   We are designing with composibility
   */
 public:
-  static constexpr unsigned align();
-  static constexpr goodsize(size_t);
+  static constexpr unsigned align = 8;
+
+  static constexpr size_t goodsize(size_t n) {
+    // we want to always give out memoory that 8 bytes aligned
+    size_t size = n % align;
+    if (size)
+      return n + 1;
+    return n;
+  }
 
   Block allocate(size_t n) {
-    Block result = Primary::allocate(n);
+    size_t actual_size = Block result = Primary::allocate(n);
 
     if (!result._ptr) {
       result = Fallback::allocate(n);
@@ -49,7 +56,6 @@ public:
     return false;
   }
 
-  //@Todo start here tomorrow
   void reallocate(Block &block, size_t n) {
     if (n > block._size) {
       expand(b, n);
@@ -63,12 +69,6 @@ public:
   }
 
   void deallocate(Block b) {
-    // I want to check which between P and F owns memory b and then call the one
-    // that I want
-    // we can add a new primitive bool owns(Block) that must be defined in
-    // primary fallback does not necesarily have to implement owns
-    // FallbackAllocator will have to implement owns if both implement it (Good
-    // Citizenry)
     if (Primary::owns(b)) {
       Primary::deallocate(b);
     } else {
@@ -79,6 +79,20 @@ public:
   void deallocateAll(Block &block) {
     Primary::deallocateAll();
     Fallback::deallocateAll();
+  }
+
+  Block alignedAllocate(size_t n) {
+    Block result = Primary::alignedAllocate(n);
+    if (result)
+      return result;
+    return Fallback::alignedAllocate(n);
+  }
+
+  Block alignedReAllocate(Block &block, size_t new_size) {
+    if (Primary::owns(block)) {
+      return Primary::alignedReAllocate(block, new_size);
+    }
+    return Fallback::alignedReAllocate(block, new_size);
   }
 
   bool owns(const Block &b) {
