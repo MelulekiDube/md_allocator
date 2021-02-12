@@ -21,7 +21,7 @@ public:
   }
 
   Block allocate(size_t n) {
-    size_t actual_size = Block result = Primary::allocate(n);
+    Block result = Primary::allocate(n);
 
     if (!result._ptr) {
       result = Fallback::allocate(n);
@@ -41,15 +41,18 @@ public:
   }
 
   bool expand(Block &block, size_t size_delta) {
+    using namespace dube;
     if (Primary::owns(block)) {
       // if the primary owns the allocator and can't satisfy the request we will
       // try to move the contents to another
-      if (Primary::expand(block, size_delta) || dube::swapAllocator(block, size_delta, As(Primary), As(Fallback)) {
+      if (Primary::expand(block, size_delta) ||
+          dube::swapAllocator(block, size_delta, As(Primary), As(Fallback))) {
         return true;
       }
     }
     if (Fallback::owns(block)) {
-        if (Fallback::expand(block, size_delta) || dube::swapAllocator(block, size_delta, As(Fallback), As(Primary)) {
+      if (Fallback::expand(block, size_delta) ||
+          dube::swapAllocator(block, size_delta, As(Fallback), As(Primary))) {
         return true;
       }
     }
@@ -58,7 +61,7 @@ public:
 
   void reallocate(Block &block, size_t n) {
     if (n > block._size) {
-      expand(b, n);
+      expand(block, n);
     } else {
       if (Primary::owns(block)) {
         Primary::reallocate(block, n);
@@ -83,7 +86,7 @@ public:
 
   Block alignedAllocate(size_t n) {
     Block result = Primary::alignedAllocate(n);
-    if (result)
+    if (result._ptr)
       return result;
     return Fallback::alignedAllocate(n);
   }
@@ -95,7 +98,7 @@ public:
     return Fallback::alignedReAllocate(block, new_size);
   }
 
-  bool owns(const Block &b) {
+  bool owns(const Block &b) const {
     // Relies on Method defination Failure is not an Error
     return Primary::owns(b) || Fallback::owns(b);
   }
